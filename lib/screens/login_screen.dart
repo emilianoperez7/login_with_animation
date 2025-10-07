@@ -19,6 +19,26 @@ class _LoginScreenState extends State<LoginScreen> {
   SMITrigger? trigSuccess; // Se emociona
   SMITrigger? trigFail; // Se pone sad
 
+  // 1) FocusNode
+  final emailFocus = FocusNode();
+  final passFocus = FocusNode();
+
+  // 2) Listeners (Oyentes/Chismosos)
+  @override
+  void initState() {
+    super.initState();
+    emailFocus.addListener(() {
+      if (emailFocus.hasFocus) {
+        //Manos abajo en email
+        isHandsUp?.change(false);
+      }
+    });
+    passFocus.addListener(() {
+      //Manos arriba en password
+      isHandsUp?.change(passFocus.hasFocus);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     //Consulta el tamaño de la pantalla
@@ -53,10 +73,13 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 10),
             //Campo de texto email
             TextField(
+              // 3) Asignas el focusNode al TextField
+              //Llamas a tu familia chismosa
+              focusNode: emailFocus,
               onChanged: (value) {
                 if (isHandsUp != null) {
                   //No tapar los ojos al escribir el mail
-                  isHandsUp!.change(false);
+                  //isHandsUp!.change(false);
                 }
                 if (isChecking == null) return;
                 //Activar el modo chismoso
@@ -75,12 +98,15 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             //Espacio entre el texto email y el texto password
             const SizedBox(height: 10),
-            //Campo de texto password
+            //Password con toggle de visibilidad
             TextField(
+              //3) Asignas el focusNode al TextField
+              //Llamas a tu familia chismosa
+              focusNode: passFocus,
               onChanged: (value) {
                 if (isChecking != null) {
                   //No tapar los ojos al escribir el mail
-                  isChecking!.change(false);
+                  //isChecking!.change(false);
                 }
                 if (isHandsUp == null) return;
                 //Activar el modo chismoso
@@ -156,5 +182,13 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     ));
+  }
+
+  //4) Liberación de recursos / limpieza de focos
+  @override
+  void dispose() {
+    emailFocus.dispose();
+    passFocus.dispose();
+    super.dispose();
   }
 }
