@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:rive/rive.dart';
+// 3.1 Importar libreria para Timer
+import 'dart:async';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -18,18 +20,26 @@ class _LoginScreenState extends State<LoginScreen> {
   SMIBool? isHandsUp; //Se tapa los ojos
   SMITrigger? trigSuccess; // Se emociona
   SMITrigger? trigFail; // Se pone sad
+  //2.1 Variable para recorrido de la mirada
+  SMINumber? numLook; //0..80 en tu asset
 
-  // 1) FocusNode
+  // 1.1 FocusNode
   final emailFocus = FocusNode();
   final passFocus = FocusNode();
 
-  // 2) Listeners (Oyentes/Chismosos)
+  //3.2  Timer para detener la mirada al dejar e teclear
+  Timer? _typingDebounce;
+
+  // 2.1 Listeners (Oyentes/Chismosos)
   @override
   void initState() {
     super.initState();
     emailFocus.addListener(() {
       if (emailFocus.hasFocus) {
         //Manos abajo en email
+        isHandsUp?.change(false);
+        // 2.2 Mirada neutral al enfocar email
+        numLook?.value = 50.0;
         isHandsUp?.change(false);
       }
     });
@@ -54,21 +64,24 @@ class _LoginScreenState extends State<LoginScreen> {
                 width: size.width,
                 height: 200,
                 child: RiveAnimation.asset(
-                    'assets/animated_login_character.riv',
-                    stateMachines: ["Login Machine"],
-                    //Al iniciarse
-                    onInit: (artboard) {
-                  controller = StateMachineController.fromArtboard(
-                      artboard, "Login Machine");
-                  //Verificar que inició bien
-                  if (controller == null) return;
-                  artboard.addController(controller!);
-                  //Asignar las variables
-                  isChecking = controller!.findSMI("isChecking");
-                  isHandsUp = controller!.findSMI("isHandsUp");
-                  trigSuccess = controller!.findSMI("trigSuccess");
-                  trigFail = controller!.findSMI("trigFail");
-                })),
+                  'assets/animated_login_character.riv',
+                  stateMachines: ["Login Machine"],
+                  //Al iniciarse
+                  onInit: (artboard) {
+                    controller = StateMachineController.fromArtboard(
+                        artboard, "Login Machine");
+                    //Verificar que inició bien
+                    if (controller == null) return;
+                    artboard.addController(controller!);
+                    //Asignar las variables
+                    isChecking = controller!.findSMI("isChecking");
+                    isHandsUp = controller!.findSMI("isHandsUp");
+                    trigSuccess = controller!.findSMI("trigSuccess");
+                    trigFail = controller!.findSMI("trigFail");
+                    // 2.3 Enlazar variable con la animación
+                    numLook = controller!.findSMI("numLook");
+                  },
+                )),
             //Espacio entre el oso y el texto email
             const SizedBox(height: 10),
             //Campo de texto email
@@ -78,8 +91,24 @@ class _LoginScreenState extends State<LoginScreen> {
               focusNode: emailFocus,
               onChanged: (value) {
                 if (isHandsUp != null) {
+                  //2.4 Implementando NumLook
                   //No tapar los ojos al escribir el mail
                   //isHandsUp!.change(false);
+                  //"Estoy escribiendo"
+                  isChecking!.change(true);
+                  //Ajuste de limites de 0 a 100
+                  final look = (value.length / 160.0 * 100.0).clamp(0.0, 100.0);
+                  numLook?.value = look;
+
+                  //3.3 Debounce si vuelve a teclear, reinicia el contador
+                  _typingDebounce?.cancel(); //Cancela cualquier timer existente
+                  _typingDebounce = Timer(const Duration(seconds: 3), () {
+                    if (!mounted) {
+                      return; // Si la pantalla se cierra
+                    }
+                    //Mirada neutra
+                    isChecking?.change(false);
+                  });
                 }
                 if (isChecking == null) return;
                 //Activar el modo chismoso
@@ -189,6 +218,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     emailFocus.dispose();
     passFocus.dispose();
+    _typingDebounce?.cancel();
     super.dispose();
   }
 }
